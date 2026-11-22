@@ -1,61 +1,63 @@
+**English** | [Português](README.pt-BR.md)
+
 # ubuntu-hardening-auditor
 
 [![CI](https://github.com/MiguelVin/ubuntu-hardening-auditor/actions/workflows/ci.yml/badge.svg)](https://github.com/MiguelVin/ubuntu-hardening-auditor/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.11+-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Ferramenta de linha de comando em Python que audita a segurança de um Ubuntu, dá uma **nota de risco de 0 a 100**, explica cada problema e **corrige automaticamente o que é seguro corrigir**.
+A Python command-line tool that audits the security of an Ubuntu system, gives it a **risk score from 0 to 100**, explains every problem and **automatically fixes what is safe to fix**.
 
-![Auditoria de um Ubuntu vulnerável](docs/img/audit.svg)
+![Audit of a vulnerable Ubuntu](docs/img/audit.svg)
 
-## O problema
+## The problem
 
-Um Ubuntu recém-instalado ou administrado às pressas costuma ter configurações que facilitam um ataque: SSH aceitando login de root, firewall desligado, arquivos de senha legíveis por qualquer usuário, programas que viram shell de root. Verificar tudo isso à mão é lento e fácil de esquecer.
+A freshly installed or hastily managed Ubuntu often ships with settings that make an attack easier: SSH accepting root logins, the firewall turned off, password files readable by any user, programs that turn into a root shell. Checking all of that by hand is slow and easy to forget.
 
-## A solução
+## The solution
 
-- **17 checagens** em 6 áreas: SSH, contas, permissões, rede, logs e política de senha
-- **Nota ponderada por severidade**: uma falha crítica pesa mais que várias baixas, e a cobertura aparece junto da nota
-- **Comando de correção** para cada falha, com avisos (ex.: "teste o login por chave antes, ou você perde o acesso")
-- **`--fix`**: correção automática com backup, validação e confirmação
-- **Relatórios** em HTML, Markdown e JSON (exemplo: [`docs/sample-report.html`](docs/sample-report.html), baixe e abra no navegador)
-- **Lab Docker** com um Ubuntu propositalmente vulnerável para testar tudo sem risco
+- **17 checks** across 6 areas: SSH, accounts, permissions, network, logs and password policy
+- **Severity-weighted score**: one critical failure weighs more than several low ones, and the coverage is shown next to the score
+- **A fix command** for every failure, with warnings (e.g. "make sure key login works first, or you will lock yourself out")
+- **`--fix`**: automatic remediation with backups, validation and confirmation
+- **Reports** in HTML, Markdown and JSON (sample: [`docs/sample-report.html`](docs/sample-report.html), download it and open it in a browser)
+- **Docker lab** with a deliberately vulnerable Ubuntu to try everything safely
 
-## Correção automática, mas só do que é seguro
+## Automatic fixes, but only the safe ones
 
-![Correção automática no lab: nota 0 → 62](docs/img/fix.svg)
+![Automatic fixes in the lab: score 0 → 62](docs/img/fix.svg)
 
-No lab, o `--fix` leva a nota de **0 para 62** e **se recusa a corrigir 7 problemas sozinho**. Isso é de propósito:
+In the lab, `--fix` raises the score from **0 to 62** and **refuses to fix 7 problems on its own**. That is on purpose:
 
-| Corrige automaticamente | Deixa para uma pessoa decidir | Por quê |
+| Fixed automatically | Left for a person to decide | Why |
 |---|---|---|
-| Configurações do SSH | Conta extra com UID 0 | Apagar uma conta exige investigar antes |
-| Conta sem senha (bloqueia) | `NOPASSWD` no sudoers | Um sudoers quebrado tira o sudo de todo mundo |
-| Permissões de `/etc/shadow` e afins | Firewall desligado | Ligar sem liberar o SSH corta o acesso remoto |
-| Arquivos com escrita para todos em `/etc` | Serviço exposto | Pará-lo pode derrubar uma aplicação |
-| SUID em binários do GTFOBins | IP forwarding / ICMP redirects | Mexe em roteamento, Docker e VPN |
-| Tamanho mínimo de senha | Brute force no `auth.log` | É evidência de ataque: investigar, não só bloquear |
+| SSH settings | Extra account with UID 0 | Deleting an account needs an investigation first |
+| Passwordless account (locked) | `NOPASSWD` in sudoers | A broken sudoers file takes sudo away from everyone |
+| Permissions of `/etc/shadow` and friends | Firewall disabled | Enabling it without allowing SSH cuts remote access |
+| World-writable files in `/etc` | Exposed service | Stopping it may take an application down |
+| SUID on GTFOBins binaries | IP forwarding / ICMP redirects | Affects routing, Docker and VPNs |
+| Minimum password length | Brute force in `auth.log` | It is evidence of an attack: investigate, don't just block |
 
-Proteções do `--fix`:
-- `--dry-run` mostra o plano sem mudar nada; sem `--yes`, sempre pede confirmação
-- Backup de cada arquivo antes da primeira alteração, **sempre com modo 600** (o backup de um `/etc/shadow` exposto não pode vazar as hashes de novo)
-- Configuração do SSH validada com `sshd -t`; se for inválida, a alteração é desfeita
-- Idempotente: rodar de novo não muda nada
+`--fix` safeguards:
+- `--dry-run` shows the plan without changing anything; without `--yes` it always asks for confirmation
+- Every file is backed up before its first change, **always with mode 600** (a backup of an exposed `/etc/shadow` must not leak the hashes again)
+- The SSH configuration is validated with `sshd -t`; if it is invalid, the change is rolled back
+- Idempotent: running it again changes nothing
 
-## Conceitos aplicados
+## Concepts applied
 
-| Área | Conceito |
+| Area | Concept |
 |---|---|
-| SSH | No `sshd_config`, **o primeiro valor vence**: por isso a correção vai num drop-in `00-hardening.conf`, lido antes dos outros |
-| Contas | O Linux dá poder de root pelo **UID**, não pelo nome; campo vazio no `/etc/shadow` = login sem senha |
-| Permissões | Modo octal (`640`), bits **SUID/SGID** e escalada de privilégio via [GTFOBins](https://gtfobins.github.io/) |
-| Rede | Sockets lidos direto do `/proc/net/tcp` (a mesma fonte do `ss`); `0.0.0.0` = exposto em todas as interfaces |
-| Senhas | Tamanho mínimo via `pam_pwquality`, seguindo o **NIST SP 800-63B** (comprimento em vez de troca forçada) |
-| Mapeamento | Cada checagem aponta as técnicas do **MITRE ATT&CK** que ela ajuda a prevenir |
+| SSH | In `sshd_config` **the first value wins**: that is why the fix goes into a `00-hardening.conf` drop-in, read before the others |
+| Accounts | Linux grants root power by **UID**, not by name; an empty field in `/etc/shadow` = login without a password |
+| Permissions | Octal modes (`640`), **SUID/SGID** bits and privilege escalation via [GTFOBins](https://gtfobins.github.io/) |
+| Network | Sockets read straight from `/proc/net/tcp` (the same source `ss` uses); `0.0.0.0` = exposed on every interface |
+| Passwords | Minimum length via `pam_pwquality`, following **NIST SP 800-63B** (length instead of forced rotation) |
+| Mapping | Every check lists the **MITRE ATT&CK** techniques it helps prevent |
 
-## Como rodar
+## Running it
 
-Requisitos: Ubuntu (ou WSL) com Python 3.11+.
+Requirements: Ubuntu (or WSL) with Python 3.11+.
 
 ```bash
 git clone https://github.com/MiguelVin/ubuntu-hardening-auditor.git
@@ -63,64 +65,64 @@ cd ubuntu-hardening-auditor
 python3 -m venv .venv
 .venv/bin/pip install -e .
 
-.venv/bin/hardaudit                     # auditoria como usuário comum (algumas checagens são puladas)
-sudo .venv/bin/hardaudit                # auditoria completa
-sudo .venv/bin/hardaudit -o reports/    # também salva report.html, report.md e report.json
-.venv/bin/hardaudit --fix --dry-run     # mostra o que seria corrigido
-sudo .venv/bin/hardaudit --fix          # corrige (pede confirmação)
+.venv/bin/hardaudit                     # audit as a normal user (some checks are skipped)
+sudo .venv/bin/hardaudit                # full audit
+sudo .venv/bin/hardaudit -o reports/    # also saves report.html, report.md and report.json
+.venv/bin/hardaudit --fix --dry-run     # shows what would be fixed
+sudo .venv/bin/hardaudit --fix          # fixes it (asks for confirmation)
 ```
 
-Outras opções: `--format json|markdown`, `--group ssh` (só um grupo), `--root /caminho` (audita um sistema de arquivos montado), `--screenshot saida.svg`, `--no-hints`.
+Other options: `--format json|markdown`, `--group ssh` (a single group), `--root /path` (audit a mounted filesystem), `--screenshot output.svg`, `--no-hints`.
 
-Código de saída: `0` tudo aprovado, `1` alguma falha, `2` o `--fix` precisa de root. Útil em pipelines de CI.
+Exit codes: `0` everything passed, `1` something failed, `2` `--fix` needs root. Handy in CI pipelines.
 
-## Laboratório Docker
+## Docker lab
 
 ```bash
-bash lab/demo.sh                               # sobe o lab, audita, corrige e salva os relatórios em lab/reports/
-docker compose -f lab/docker-compose.yml down  # desliga o lab
+bash lab/demo.sh                               # starts the lab, audits, fixes and saves the reports to lab/reports/
+docker compose -f lab/docker-compose.yml down  # stops the lab
 ```
 
-O container é **propositalmente inseguro** (SSH com root e senha vazia, backdoor UID 0, `find` com SUID, "Redis" exposto, brute force simulado no `auth.log` com IPs de documentação da RFC 5737) e **não publica nenhuma porta**: nada fica acessível pela sua rede.
+The container is **deliberately insecure** (SSH with root login and an empty password, a UID 0 backdoor, `find` with SUID, an exposed "Redis", simulated brute force in `auth.log` using RFC 5737 documentation IPs) and **publishes no ports**: nothing is reachable from your network.
 
-## Qualidade
+## Quality
 
-- 69 testes com `pytest`: cada checagem e cada correção roda contra um "Ubuntu falso" numa pasta temporária, graças à opção `--root`
-- Lint e formatação com `ruff`
-- CI no GitHub Actions: testes em Python 3.11, 3.12 e 3.13 e um job que sobe o lab e confirma que o `--fix` melhora a nota
+- 69 `pytest` tests: every check and every fix runs against a "fake Ubuntu" in a temporary folder, thanks to the `--root` option
+- Linting and formatting with `ruff`
+- GitHub Actions CI: tests on Python 3.11, 3.12 and 3.13, plus a job that starts the lab and confirms `--fix` raises the score
 
-## Estrutura
+## Project structure
 
 ```
 src/hardaudit/
 ├── checks/      # ssh, accounts, permissions, network, logs, passwords
-├── fix/         # plano de correção, fixers e backups
+├── fix/         # fix plan, fixers and backups
 ├── reports/     # terminal, HTML, Markdown, JSON
-├── sshd.py      # parser do sshd_config (Include, Match, primeiro valor vence)
-├── score.py     # nota ponderada por severidade
+├── sshd.py      # sshd_config parser (Include, Match, first value wins)
+├── score.py     # severity-weighted score
 └── cli.py
-lab/             # Ubuntu vulnerável em Docker + demo
+lab/             # vulnerable Ubuntu in Docker + demo
 tests/
 ```
 
-## Tecnologias
+## Stack
 
 Python · Rich · Jinja2 · pytest · ruff · Docker · GitHub Actions · Linux (PAM, sshd, UFW, /proc)
 
-## Lições aprendidas
+## Lessons learned
 
-- **Testar num sistema real encontra o que o teste unitário não encontra**: no Ubuntu 26.04 a ferramenta acusou o `/usr/bin/sudo.ws` como SUID suspeito. Era uma mudança recente da distribuição (o `sudo` virou `sudo-rs`, escrito em Rust, e o clássico passou a se chamar `sudo.ws`).
-- **Uma nota alta sobre poucas checagens não prova nada**: a primeira versão dava 100/100 avaliando só 1 de 8 itens. Agora a cobertura aparece junto da nota.
-- **Automatizar correções exige saber quando NÃO automatizar.**
+- **Testing on a real system finds what unit tests don't**: on Ubuntu 26.04 the tool flagged `/usr/bin/sudo.ws` as a suspicious SUID binary. It was a recent change in the distribution (`sudo` became `sudo-rs`, written in Rust, and the classic one was renamed `sudo.ws`).
+- **A high score over few checks proves nothing**: the first version gave 100/100 while evaluating only 1 of 8 items. Coverage is now shown next to the score.
+- **Automating fixes means knowing when NOT to automate.**
 
-## Próximos passos
+## Next steps
 
-- Ler logs do `journald` (sistemas sem `/var/log/auth.log`)
-- Referenciar a seção do CIS Ubuntu Benchmark em cada checagem
-- Checagens de serviços (`systemd`), atualizações pendentes e AppArmor
+- Read `journald` logs (systems without `/var/log/auth.log`)
+- Reference the CIS Ubuntu Benchmark section in every check
+- Checks for services (`systemd`), pending updates and AppArmor
 
-## Autor
+## Author
 
-**MiguelVin** · Estudante de Engenharia da Computação · [GitHub](https://github.com/MiguelVin)
+**MiguelVin** · Computer Engineering student · [GitHub](https://github.com/MiguelVin)
 
-> Ferramenta para fins educacionais. Use apenas em sistemas próprios ou com autorização explícita. Revise cada comando antes de executá-lo.
+> For educational use. Run it only on systems you own or are explicitly authorized to audit. Review every command before running it.

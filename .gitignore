@@ -9,6 +9,7 @@ dist/
 
 # Generated reports (leading "/" = only at the repo root, not src/hardaudit/reports/)
 /reports/
+/lab/reports/
 report.html
 report.md
 report.json

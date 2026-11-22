@@ -35,7 +35,7 @@ FIX = [
 ]
 
 
-def _pwquality_line(pam_text: str) -> str | None:
+def pwquality_line(pam_text: str) -> str | None:
     for line in pam_text.splitlines():
         if "pam_pwquality.so" in line and not line.strip().startswith("#"):
             return line
@@ -64,7 +64,7 @@ def password_min_length(ctx: SystemContext) -> Outcome:
     pam = ctx.read_text(PAM_PASSWORD)
     if pam is None:
         raise SkipCheck(f"{PAM_PASSWORD} not found")
-    line = _pwquality_line(pam)
+    line = pwquality_line(pam)
     if line is None:
         return failed("pam_pwquality is not enabled: password strength is not enforced", FIX)
     minlen = effective_minlen(ctx, line)

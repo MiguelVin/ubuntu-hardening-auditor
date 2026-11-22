@@ -62,3 +62,17 @@ def test_cli_output_writes_three_files(tmp_path, capsys):
     assert sorted(p.name for p in out.iterdir()) == ["report.html", "report.json", "report.md"]
     stdout = capsys.readouterr().out
     assert json.loads(stdout)["target"] == str(root)  # stdout stays valid JSON
+
+
+def test_cli_screenshot_saves_svg(tmp_path, capsys):
+    root = tmp_path / "root"
+    (root / "etc/ssh").mkdir(parents=True)
+    (root / "etc/ssh/sshd_config").write_text("PermitRootLogin yes\n")
+    image = tmp_path / "img" / "audit.svg"
+
+    main(["--root", str(root), "--group", "ssh", "--screenshot", str(image)])
+
+    svg = image.read_text()
+    assert svg.startswith("<svg")
+    assert "SSH" in svg and "001" in svg
+    assert "Score" in svg

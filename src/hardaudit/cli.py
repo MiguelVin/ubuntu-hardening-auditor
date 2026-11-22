@@ -54,6 +54,15 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="DIR",
         help="also save report.html, report.md and report.json in this folder",
     )
+    parser.add_argument(
+        "--screenshot",
+        type=Path,
+        metavar="FILE.svg",
+        help="save the coloured terminal output as an SVG image (for READMEs and posts)",
+    )
+    parser.add_argument(
+        "--no-hints", action="store_true", help="hide the 'How to fix' section (compact output)"
+    )
     fix = parser.add_argument_group("automatic fixes")
     fix.add_argument(
         "--fix", action="store_true", help="apply the safe automatic fixes (asks first)"
@@ -84,10 +93,11 @@ def run_fix(args: argparse.Namespace, results: list[CheckResult], console: Conso
     plan = plan_fixes(ctx, results, backups)
 
     console.print(Rule("Automatic fixes"))
-    for action in plan.actions:
-        console.print(
-            f"  [cyan]•[/] [bold]{action.check_id}[/] {action.description}", highlight=False
-        )
+    if not args.yes:  # with --yes the applied list below already shows every action
+        for action in plan.actions:
+            console.print(
+                f"  [cyan]•[/] [bold]{action.check_id}[/] {action.description}", highlight=False
+            )
     if plan.manual:
         ids = ", ".join(r.meta.id for r in plan.manual)
         console.print(
@@ -136,9 +146,13 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--dry-run and --yes only work together with --fix")
     if args.fix and args.format != "terminal":
         parser.error("--fix is interactive: use it with the terminal format")
+    if args.screenshot and args.format != "terminal":
+        parser.error("--screenshot captures the terminal format")
 
     results = run_checks(SystemContext(args.root), args.group)
-    console = Console()
+    # record=True keeps everything printed so it can be exported as SVG;
+    # a fixed width makes every screenshot the same size.
+    console = Console(record=True, width=110) if args.screenshot else Console()
 
     if args.format == "json":
         print(render_json(build_report(results, str(args.root))))
@@ -146,7 +160,9 @@ def main(argv: list[str] | None = None) -> int:
         print(render_markdown(build_report(results, str(args.root))))
     else:
         score = build_report(results, str(args.root))["score"]
-        render_terminal(results, score, console, str(args.root), _is_root())
+        render_terminal(
+            results, score, console, str(args.root), _is_root(), show_hints=not args.no_hints
+        )
 
     if args.fix:
         results = run_fix(args, results, console)
@@ -157,6 +173,10 @@ def main(argv: list[str] | None = None) -> int:
         Console(stderr=True).print(
             "Reports saved: " + ", ".join(str(p) for p in written), highlight=False
         )
+    if args.screenshot:
+        args.screenshot.parent.mkdir(parents=True, exist_ok=True)
+        console.save_svg(str(args.screenshot), title="hardaudit")
+        Console(stderr=True).print(f"Screenshot saved: {args.screenshot}", highlight=False)
 
     return 1 if any(r.status is Status.FAIL for r in results) else 0
 

@@ -10,6 +10,9 @@ dist/
 # Generated reports (leading "/" = only at the repo root, not src/hardaudit/reports/)
 /reports/
 /lab/reports/
+
+# Social media drafts (personal, not part of the project)
+/divulgacao/
 report.html
 report.md
 report.json

@@ -12,7 +12,7 @@ from rich.table import Table
 from rich.text import Text
 
 from hardaudit.models import CheckResult, Severity, Status
-from hardaudit.score import grade
+from hardaudit.score import compute_score, grade
 
 STATUS_STYLE = {
     Status.PASS: ("PASS", "bold green"),
@@ -89,3 +89,42 @@ def render_terminal(
     )
     if counts[Status.SKIP] and not is_root:
         console.print("[yellow]Tip:[/] run with sudo to evaluate the skipped checks.")
+
+
+def render_fix_summary(
+    before: list[CheckResult], after: list[CheckResult], console: Console
+) -> None:
+    """What changed after --fix: per-check status changes and the new score."""
+    console.print(Rule("After fixes"))
+    previous = {r.meta.id: r.status for r in before}
+    for r in after:
+        old = previous.get(r.meta.id)
+        if old is not None and old is not r.status:
+            old_label, old_style = STATUS_STYLE[old]
+            new_label, new_style = STATUS_STYLE[r.status]
+            console.print(
+                Text.assemble(
+                    f"  {r.meta.id:<9}",
+                    (old_label, old_style),
+                    " → ",
+                    (new_label, new_style),
+                    f"  {r.meta.title}",
+                )
+            )
+
+    old_score, new_score = compute_score(before), compute_score(after)
+    label, colour = grade(new_score)
+    console.print(
+        Panel(
+            f"[bold {colour}]Score: {old_score} → {new_score}/100  ·  {label}[/]",
+            border_style=colour,
+            expand=False,
+        )
+    )
+    still = [r.meta.id for r in after if r.status is Status.FAIL]
+    if still:
+        console.print(
+            f"[yellow]Still failing, needs a human decision:[/] {', '.join(still)}. "
+            "See 'How to fix' above.",
+            highlight=False,
+        )

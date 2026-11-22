@@ -1,0 +1,8 @@
+services:
+  vulnerable-ubuntu:
+    build:
+      context: ..
+      dockerfile: lab/Dockerfile
+    container_name: hardaudit-lab
+    hostname: lab
+    # No "ports:" on purpose: the weak SSH and the fake Redis stay inside Docker.

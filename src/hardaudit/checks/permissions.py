@@ -73,20 +73,12 @@ def account_files(ctx: SystemContext) -> Outcome:
     return failed("; ".join(problems), fix)
 
 
-@check(
-    id="PERM-002",
-    title="No world-writable files in /etc",
-    group=GROUP,
-    severity=Severity.HIGH,
-    mitre=("T1222.002",),
-)
-def world_writable_etc(ctx: SystemContext) -> Outcome:
-    # /etc holds system configuration. If anyone can write to a file there,
-    # any user can change how the system behaves (and often become root).
+def world_writable_paths(ctx: SystemContext) -> list[Path]:
+    """Files and directories in /etc that anyone can write to (also used by --fix)."""
     base = ctx.path("/etc")
     if not base.is_dir():
         raise SkipCheck("/etc not found")
-    found: list[str] = []
+    found: list[Path] = []
     for dirpath, dirnames, filenames in os.walk(base):
         for name in sorted(dirnames + filenames):
             path = Path(dirpath) / name
@@ -98,7 +90,21 @@ def world_writable_etc(ctx: SystemContext) -> Outcome:
                 continue  # symlinks always show 777; what matters is their target
             sticky_dir = S_ISDIR(info.st_mode) and info.st_mode & S_ISVTX
             if info.st_mode & S_IWOTH and not sticky_dir:
-                found.append(ctx.display(path))
+                found.append(path)
+    return found
+
+
+@check(
+    id="PERM-002",
+    title="No world-writable files in /etc",
+    group=GROUP,
+    severity=Severity.HIGH,
+    mitre=("T1222.002",),
+)
+def world_writable_etc(ctx: SystemContext) -> Outcome:
+    # /etc holds system configuration. If anyone can write to a file there,
+    # any user can change how the system behaves (and often become root).
+    found = [ctx.display(path) for path in world_writable_paths(ctx)]
     if not found:
         return passed("No world-writable file or directory in /etc")
     fix = [f"sudo chmod o-w {path}" for path in found[:MAX_LISTED]]
@@ -137,17 +143,15 @@ def _base_name(name: str) -> str:
     return re.sub(r"[\d.]+$", "", name)
 
 
-@check(
-    id="PERM-003",
-    title="No unexpected SUID/SGID binaries",
-    group=GROUP,
-    severity=Severity.HIGH,
-    mitre=("T1548.001",),
-)
-def suid_binaries(ctx: SystemContext) -> Outcome:
+def is_gtfobin(path: Path) -> bool:
+    return _base_name(path.name) in GTFOBINS
+
+
+def scan_suid(ctx: SystemContext) -> tuple[int, list[Path]]:
+    """(total SUID/SGID binaries, the unexpected ones). Also used by --fix."""
     seen_dirs: set[Path] = set()
     total = 0
-    unexpected: list[str] = []
+    unexpected: list[Path] = []
     for directory in BIN_DIRS:
         path = ctx.path(directory)
         if not path.is_dir():
@@ -165,14 +169,27 @@ def suid_binaries(ctx: SystemContext) -> Outcome:
                 continue
             total += 1
             if entry.name not in EXPECTED_SUID:
-                label = ctx.display(entry)
-                if _base_name(entry.name) in GTFOBINS:
-                    label += " [GTFOBins: root shell]"
-                unexpected.append(label)
+                unexpected.append(entry)
     if not seen_dirs:
         raise SkipCheck("No binary directory found")
+    return total, unexpected
+
+
+@check(
+    id="PERM-003",
+    title="No unexpected SUID/SGID binaries",
+    group=GROUP,
+    severity=Severity.HIGH,
+    mitre=("T1548.001",),
+)
+def suid_binaries(ctx: SystemContext) -> Outcome:
+    total, unexpected = scan_suid(ctx)
     if not unexpected:
         return passed(f"{total} SUID/SGID binaries found, all expected on Ubuntu")
+    labels = [
+        ctx.display(path) + (" [GTFOBins: root shell]" if is_gtfobin(path) else "")
+        for path in unexpected
+    ]
     fix = ["# Confirm each program really does not need SUID/SGID before removing it"]
-    fix += [f"sudo chmod u-s,g-s {label.split(' ')[0]}" for label in unexpected[:MAX_LISTED]]
-    return failed(f"Unexpected SUID/SGID: {_summarize(unexpected)}", fix)
+    fix += [f"sudo chmod u-s,g-s {ctx.display(path)}" for path in unexpected[:MAX_LISTED]]
+    return failed(f"Unexpected SUID/SGID: {_summarize(labels)}", fix)

@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 authors = [{ name = "MiguelVin" }]
-dependencies = ["rich>=13"]
+dependencies = ["rich>=13", "jinja2>=3.1"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6"]
@@ -20,6 +20,9 @@ hardaudit = "hardaudit.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+hardaudit = ["reports/templates/*.j2"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

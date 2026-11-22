@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TypeVar
@@ -37,6 +38,17 @@ class SystemContext:
         """
         try:
             return self.path(absolute).read_text(encoding="utf-8", errors="replace")
+        except (FileNotFoundError, NotADirectoryError):
+            return None
+
+    def stat(self, absolute: str) -> os.stat_result | None:
+        """File metadata (mode, owner...), or None if the file does not exist.
+
+        Reading metadata does not require read permission on the file itself,
+        so permissions of /etc/shadow can be checked without sudo.
+        """
+        try:
+            return self.path(absolute).stat()
         except (FileNotFoundError, NotADirectoryError):
             return None
 

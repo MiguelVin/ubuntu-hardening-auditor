@@ -1,6 +1,6 @@
 # ubuntu-hardening-auditor
 
-> 🚧 Em desenvolvimento: fase 1 de 4 (checagens de SSH e contas).
+> 🚧 Em desenvolvimento: fase 2 de 4 (17 checagens e relatórios HTML/Markdown/JSON).
 
 Ferramenta de linha de comando em Python que audita a segurança de uma máquina Ubuntu, dá uma nota de risco de 0 a 100 e mostra o comando para corrigir cada problema.
 
@@ -13,6 +13,7 @@ python3 -m venv .venv
 .venv/bin/hardaudit            # auditoria como usuário comum (algumas checagens são puladas)
 sudo .venv/bin/hardaudit       # auditoria completa
 .venv/bin/hardaudit --format json
+.venv/bin/hardaudit -o reports/  # salva report.html, report.md e report.json
 ```
 
 ## Testes

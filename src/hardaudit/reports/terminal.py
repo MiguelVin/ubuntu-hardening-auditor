@@ -35,6 +35,7 @@ def render_terminal(
     console: Console,
     target: str,
     is_root: bool,
+    show_hints: bool = True,
 ) -> None:
     console.print(Rule("[bold]hardaudit[/] · Ubuntu security audit"))
     privileges = "root" if is_root else "normal user (some checks need sudo)"
@@ -58,7 +59,7 @@ def render_terminal(
     console.print(table)
 
     failures = [r for r in results if r.status is Status.FAIL]
-    if failures:
+    if failures and show_hints:
         console.print(Rule("How to fix"))
         for r in failures:
             console.print(f"\n[bold red]{r.meta.id}[/] {r.meta.title}", highlight=False)

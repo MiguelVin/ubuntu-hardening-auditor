@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hardaudit report · /</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1c2330; --muted: #5d6778; --line: #e2e6ec;
+    --code: #f0f2f5; --pass: #1a7f4b; --fail: #c62828; --skip: #9a6700; --error: #8e24aa;
+    --critical: #b71c1c; --high: #d84315; --medium: #b7791f; --low: #2f6f9f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1318; --card: #171c23; --text: #e6e9ee; --muted: #98a2b3; --line: #2a313b;
+      --code: #0f1318; --pass: #4cc38a; --fail: #ff6b6b; --skip: #e3b341; --error: #d58cf0;
+      --critical: #ff6b6b; --high: #ff8a50; --medium: #e3b341; --low: #6cb6ff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { margin: 0 0 4px; font-size: 26px; }
+  h2 { margin: 36px 0 12px; font-size: 19px; }
+  .muted { color: var(--muted); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+  .summary { display: flex; flex-wrap: wrap; gap: 24px; align-items: center;
+             padding: 24px; margin-top: 20px; }
+  .ring { --pct: 62; width: 128px; height: 128px; border-radius: 50%;
+          display: grid; place-items: center; flex: none;
+          background: conic-gradient(var(--score-colour) calc(var(--pct) * 1%), var(--line) 0); }
+  .ring > div { width: 100px; height: 100px; border-radius: 50%; background: var(--card);
+                display: grid; place-items: center; text-align: center; line-height: 1.1; }
+  .ring strong { font-size: 32px; display: block; }
+  .stats { display: flex; flex-wrap: wrap; gap: 12px; }
+  .stat { padding: 10px 16px; border-radius: 10px; background: var(--code); min-width: 92px; }
+  .stat b { display: block; font-size: 22px; }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .filters button { border: 1px solid var(--line); background: var(--card); color: var(--text);
+                    border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; }
+  .filters button.active { border-color: var(--text); font-weight: 600; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line);
+           vertical-align: top; }
+  th { font-size: 13px; color: var(--muted); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 12px;
+           font-weight: 700; letter-spacing: .03em; color: #fff; }
+  .s-pass { background: var(--pass); } .s-fail { background: var(--fail); }
+  .s-skip { background: var(--skip); } .s-error { background: var(--error); }
+  .sev { font-weight: 600; }
+  .sev-critical { color: var(--critical); } .sev-high { color: var(--high); }
+  .sev-medium { color: var(--medium); } .sev-low { color: var(--low); }
+  code, pre { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 13px; }
+  .id { white-space: nowrap; color: var(--muted); }
+  .detail { word-break: break-word; }
+  .fix { padding: 16px 20px; margin-bottom: 12px; }
+  .fix h3 { margin: 0 0 8px; font-size: 16px; }
+  pre { background: var(--code); border: 1px solid var(--line); border-radius: 8px;
+        padding: 12px; overflow-x: auto; margin: 8px 0 0; }
+  .comment { color: var(--muted); }
+  a { color: var(--low); }
+  footer { margin-top: 40px; font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>hardaudit report</h1>
+  <div class="muted">Target <code>/</code> · 2026-11-22T05:28:12+00:00 · hardaudit 0.1.0</div>
+
+  <section class="card summary" style="--score-colour: var(--high)">
+    <div class="ring"><div>
+      <div><strong>62</strong><span class="muted">/ 100</span></div>
+    </div></div>
+    <div>
+      <div style="font-size:20px;font-weight:700">Weak</div>
+      <div class="muted" style="margin-bottom:12px">17 of 17 checks evaluated</div>
+      <div class="stats">
+        <div class="stat"><b style="color:var(--pass)">10</b>passed</div>
+        <div class="stat"><b style="color:var(--fail)">7</b>failed</div>
+        <div class="stat"><b style="color:var(--skip)">0</b>skipped</div>
+        <div class="stat"><b style="color:var(--error)">0</b>errors</div>
+      </div>
+    </div>
+  </section>
+
+  <h2>Checks</h2>
+  <div class="filters" role="group" aria-label="Filter by status">
+    <button class="active" data-filter="all">All</button>
+    <button data-filter="fail">Failed</button>
+    <button data-filter="pass">Passed</button>
+    <button data-filter="skip">Skipped</button>
+  </div>
+  <div class="card table-wrap">
+    <table>
+      <thead><tr><th>Status</th><th>ID</th><th>Check</th><th>Severity</th><th>Detail</th><th>MITRE ATT&amp;CK</th></tr></thead>
+      <tbody>
+      
+        <tr data-status="pass">
+          <td><span class="badge s-pass">PASS</span></td>
+          <td class="id"><code>SSH-001</code></td>
+          <td>Root login over SSH is disabled</td>
+          <td class="sev sev-critical">critical</td>
+          <td class="detail">PermitRootLogin is &#39;no&#39; (set in config)</td>
+          <td><a href="https://attack.mitre.org/techniques/T1021/004/" target="_blank" rel="noopener">T1021.004</a>, <a href="https://attack.mitre.org/techniques/T1110/" target="_blank" rel="noopener">T1110</a></td>
+        </tr>
+      
+        <tr data-status="pass">
+          <td><span class="badge s-pass">PASS</span></td>
+          <td class="id"><code>SSH-002</code></td>
+          <td>SSH password authentication is disabled</td>
+          <td class="sev sev-high">high</td>
+          <td class="detail">PasswordAuthentication is &#39;no&#39; (set in config)</td>
+          <td><a href="https://attack.mitre.org/techniques/T1110/" target="_blank" rel="noopener">T1110</a></td>
+        </tr>
+      
+        <tr data-status="pass">
+          <td><span class="badge s-pass">PASS</span></td>
+          <td class="id"><code>SSH-003</code></td>
+          <td>SSH login with empty passwords is disabled</td>
+          <td class="sev sev-critical">critical</td>
+          <td class="detail">PermitEmptyPasswords is &#39;no&#39; (set in config)</td>
+          <td><a href="https://attack.mitre.org/techniques/T1078/" target="_blank" rel="noopener">T1078</a></td>
+        </tr>
+      
+        <tr data-status="pass">
+          <td><span class="badge s-pass">PASS</span></td>
+          <td class="id"><code>SSH-004</code></td>
+          <td>SSH limits authentication attempts (MaxAuthTries &lt;= 4)</td>
+          <td class="sev sev-medium">medium</td>
+          <td class="detail">MaxAuthTries is &#39;4&#39; (set in config)</td>
+          <td><a href="https://attack.mitre.org/techniques/T1110/" target="_blank" rel="noopener">T1110</a></td>
+        </tr>
+      
+        <tr data-status="pass">
+          <td><span class="badge s-pass">PASS</span></td>
+          <td class="id"><code>SSH-005</code></td>
+          <td>SSH X11 forwarding is disabled</td>
+          <td class="sev sev-low">low</td>
+          <td class="detail">X11Forwarding is &#39;no&#39; (set in config)</td>
+          <td></td>
+        </tr>
+      
+        <tr data-status="fail">
+          <td><span class="badge s-fail">FAIL</span></td>
+          <td class="id"><code>ACC-001</code></td>
+          <td>Only root has UID 0</td>
+          <td class="sev sev-critical">critical</td>
+          <td class="detail">Accounts with UID 0 besides root: toor</td>
+          <td><a href="https://attack.mitre.org/techniques/T1078/003/" target="_blank" rel="noopener">T1078.003</a></td>
+        </tr>
+      
+        <tr data-status="pass">
+          <td><span class="badge s-pass">PASS</span></td>
+          <td class="id"><code>ACC-002</code></td>
+          <td>No account has an empty password</td>
+          <td class="sev sev-critical">critical</td>
+          <td class="detail">Every account has a password hash or is locked</td>
+          <td><a href="https://attack.mitre.org/techniques/T1078/003/" target="_blank" rel="noopener">T1078.003</a></td>
+        </tr>
+      
+        <tr data-status="fail">
+          <td><span class="badge s-fail">FAIL</span></td>
+          <td class="id"><code>ACC-003</code></td>
+          <td>sudo always asks for a password (no NOPASSWD)</td>
+          <td class="sev sev-high">high</td>
+          <td class="detail">NOPASSWD found at /etc/sudoers.d/deploy:1</td>
+          <td><a href="https://attack.mitre.org/techniques/T1548/003/" target="_blank" rel="noopener">T1548.003</a></td>
+        </tr>
+      
+        <tr data-status="pass">
+          <td><span class="badge s-pass">PASS</span></td>
+          <td class="id"><code>PERM-001</code></td>
+          <td>Account database files have safe permissions</td>
+          <td class="sev sev-high">high</td>
+          <td class="detail">4 files checked: mode and owner are correct</td>
+          <td><a href="https://attack.mitre.org/techniques/T1003/008/" target="_blank" rel="noopener">T1003.008</a></td>
+        </tr>
+      
+        <tr data-status="pass">
+          <td><span class="badge s-pass">PASS</span></td>
+          <td class="id"><code>PERM-002</code></td>
+          <td>No world-writable files in /etc</td>
+          <td class="sev sev-high">high</td>
+          <td class="detail">No world-writable file or directory in /etc</td>
+          <td><a href="https://attack.mitre.org/techniques/T1222/002/" target="_blank" rel="noopener">T1222.002</a></td>
+        </tr>
+      
+        <tr data-status="pass">
+          <td><span class="badge s-pass">PASS</span></td>
+          <td class="id"><code>PERM-003</code></td>
+          <td>No unexpected SUID/SGID binaries</td>
+          <td class="sev sev-high">high</td>
+          <td class="detail">14 SUID/SGID binaries found, all expected on Ubuntu</td>
+          <td><a href="https://attack.mitre.org/techniques/T1548/001/" target="_blank" rel="noopener">T1548.001</a></td>
+        </tr>
+      
+        <tr data-status="fail">
+          <td><span class="badge s-fail">FAIL</span></td>
+          <td class="id"><code>NET-001</code></td>
+          <td>UFW firewall is enabled and denies incoming traffic by default</td>
+          <td class="sev sev-high">high</td>
+          <td class="detail">UFW enabled=no, default incoming policy=DROP</td>
+          <td><a href="https://attack.mitre.org/techniques/T1562/004/" target="_blank" rel="noopener">T1562.004</a></td>
+        </tr>
+      
+        <tr data-status="fail">
+          <td><span class="badge s-fail">FAIL</span></td>
+          <td class="id"><code>NET-002</code></td>
+          <td>No risky service exposed on all network interfaces</td>
+          <td class="sev sev-high">high</td>
+          <td class="detail">Listening on all interfaces: 22/tcp SSH, 6379/tcp Redis</td>
+          <td><a href="https://attack.mitre.org/techniques/T1190/" target="_blank" rel="noopener">T1190</a></td>
+        </tr>
+      
+        <tr data-status="fail">
+          <td><span class="badge s-fail">FAIL</span></td>
+          <td class="id"><code>NET-003</code></td>
+          <td>IP forwarding is disabled</td>
+          <td class="sev sev-medium">medium</td>
+          <td class="detail">net.ipv4.ip_forward = 1</td>
+          <td><a href="https://attack.mitre.org/techniques/T1090/" target="_blank" rel="noopener">T1090</a></td>
+        </tr>
+      
+        <tr data-status="fail">
+          <td><span class="badge s-fail">FAIL</span></td>
+          <td class="id"><code>NET-004</code></td>
+          <td>ICMP redirects are not accepted</td>
+          <td class="sev sev-medium">medium</td>
+          <td class="detail">all.accept_redirects = 0, default.accept_redirects = 1</td>
+          <td><a href="https://attack.mitre.org/techniques/T1557/" target="_blank" rel="noopener">T1557</a></td>
+        </tr>
+      
+        <tr data-status="fail">
+          <td><span class="badge s-fail">FAIL</span></td>
+          <td class="id"><code>LOG-001</code></td>
+          <td>No SSH brute-force activity in auth.log</td>
+          <td class="sev sev-medium">medium</td>
+          <td class="detail">55 failed SSH logins; 2 IP(s) with 10+ attempts: 203.0.113.7 (40), 198.51.100.23 (15)</td>
+          <td><a href="https://attack.mitre.org/techniques/T1110/001/" target="_blank" rel="noopener">T1110.001</a></td>
+        </tr>
+      
+        <tr data-status="pass">
+          <td><span class="badge s-pass">PASS</span></td>
+          <td class="id"><code>PWD-001</code></td>
+          <td>Passwords must have at least 14 characters</td>
+          <td class="sev sev-medium">medium</td>
+          <td class="detail">pam_pwquality minlen = 14</td>
+          <td><a href="https://attack.mitre.org/techniques/T1110/" target="_blank" rel="noopener">T1110</a></td>
+        </tr>
+      
+      </tbody>
+    </table>
+  </div>
+
+  
+  
+  <h2>How to fix</h2>
+  
+    <div class="card fix">
+      <h3><span class="sev sev-critical">ACC-001</span> · Only root has UID 0</h3>
+      <div class="muted">Accounts with UID 0 besides root: toor</div>
+      <pre><span class="comment"># Check whether these accounts are legitimate before changing anything</span>
+$ grep &#39;^toor:&#39; /etc/passwd
+<span class="comment"># If an account is not legitimate, lock and expire it</span>
+$ sudo usermod -L -e 1 toor
+</pre>
+    </div>
+  
+    <div class="card fix">
+      <h3><span class="sev sev-high">ACC-003</span> · sudo always asks for a password (no NOPASSWD)</h3>
+      <div class="muted">NOPASSWD found at /etc/sudoers.d/deploy:1</div>
+      <pre>$ sudo visudo -f /etc/sudoers.d/deploy  # remove NOPASSWD on line 1
+</pre>
+    </div>
+  
+    <div class="card fix">
+      <h3><span class="sev sev-high">NET-001</span> · UFW firewall is enabled and denies incoming traffic by default</h3>
+      <div class="muted">UFW enabled=no, default incoming policy=DROP</div>
+      <pre>$ sudo ufw default deny incoming
+<span class="comment"># If you use SSH, allow it BEFORE enabling or you will lose access</span>
+$ sudo ufw allow OpenSSH
+$ sudo ufw enable
+</pre>
+    </div>
+  
+    <div class="card fix">
+      <h3><span class="sev sev-high">NET-002</span> · No risky service exposed on all network interfaces</h3>
+      <div class="muted">Listening on all interfaces: 22/tcp SSH, 6379/tcp Redis</div>
+      <pre><span class="comment"># Redis: bind it to 127.0.0.1 in its config, or block it:</span>
+$ sudo ufw deny 6379/tcp
+</pre>
+    </div>
+  
+    <div class="card fix">
+      <h3><span class="sev sev-medium">NET-003</span> · IP forwarding is disabled</h3>
+      <div class="muted">net.ipv4.ip_forward = 1</div>
+      <pre>$ printf &#39;net.ipv4.ip_forward = 0\n&#39; | sudo tee -a /etc/sysctl.d/60-hardening.conf
+$ sudo sysctl --system
+</pre>
+    </div>
+  
+    <div class="card fix">
+      <h3><span class="sev sev-medium">NET-004</span> · ICMP redirects are not accepted</h3>
+      <div class="muted">all.accept_redirects = 0, default.accept_redirects = 1</div>
+      <pre>$ printf &#39;net.ipv4.conf.all.accept_redirects = 0\nnet.ipv4.conf.default.accept_redirects = 0\n&#39; | sudo tee -a /etc/sysctl.d/60-hardening.conf
+$ sudo sysctl --system
+</pre>
+    </div>
+  
+    <div class="card fix">
+      <h3><span class="sev sev-medium">LOG-001</span> · No SSH brute-force activity in auth.log</h3>
+      <div class="muted">55 failed SSH logins; 2 IP(s) with 10+ attempts: 203.0.113.7 (40), 198.51.100.23 (15)</div>
+      <pre><span class="comment"># Ban IPs automatically after repeated failures</span>
+$ sudo apt install fail2ban
+<span class="comment"># Turning off password login (SSH-002) makes guessing useless</span>
+$ sudo ufw deny from 203.0.113.7
+$ sudo ufw deny from 198.51.100.23
+</pre>
+    </div>
+  
+  
+
+  <footer class="muted">
+    Review every command before running it. For educational use on systems you own or are authorized to audit.
+  </footer>
+</main>
+<script>
+  document.querySelectorAll(".filters button").forEach(function (button) {
+    button.addEventListener("click", function () {
+      document.querySelectorAll(".filters button").forEach(function (b) { b.classList.remove("active"); });
+      button.classList.add("active");
+      var wanted = button.dataset.filter;
+      document.querySelectorAll("tbody tr").forEach(function (row) {
+        row.hidden = wanted !== "all" && row.dataset.status !== wanted;
+      });
+    });
+  });
+</script>
+</body>
+</html>
